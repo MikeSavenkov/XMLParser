@@ -1,3 +1,4 @@
+import com.jayway.jsonpath.JsonPath;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -9,11 +10,13 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.*;
 import java.io.*;
+import java.net.URL;
 import java.util.*;
 
 public class Main {
     public static void main(String[] args) throws FileNotFoundException {
 
+        String urlString = "https://www.cbr-xml-daily.ru/daily_json.js";
         InputStream file = new FileInputStream("test.xml");
         Scanner s = new Scanner(file).useDelimiter("\\A");
         String xmlString = s.hasNext() ? s.next() : "";
@@ -30,16 +33,20 @@ public class Main {
             Document document = documentBuilder.parse(targetStream);
             List<Integer> list = new ArrayList<>();
 
-            parser(list, document);
+            int count = parser(list, document);
+            readUrl(urlString);
+            json(count);
 
         } catch (ParserConfigurationException | SAXException | IOException | XPathExpressionException ex) {
             ex.printStackTrace(System.out);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
     }
 
 
-    static void parser(List<Integer> list, Document fileNameXML) throws DOMException, XPathExpressionException {
+    static int parser(List<Integer> list, Document fileNameXML) throws DOMException, XPathExpressionException {
 
 //        System.out.println("Example 1 - Печать всех элементов Cost");
 //        XPathFactory pathFactory = XPathFactory.newInstance();
@@ -60,8 +67,6 @@ public class Main {
 //        }
 //        System.out.println();
 
-
-        System.out.println("Example 2 - Печать элемента Item у которого атрибут exclude='true'");
         XPathFactory pathFactory = XPathFactory.newInstance();
         XPath xpath = pathFactory.newXPath();
         XPathExpression expr = xpath.compile("root/main/items/item[@exclude='true']");
@@ -82,7 +87,35 @@ public class Main {
         }
         System.out.println(list.toString());
         System.out.println(count);
+        return count;
+    }
 
+    private static String readUrl(String urlString) throws Exception {
+
+        BufferedReader reader = null;
+        try {
+            URL url = new URL(urlString);
+            reader = new BufferedReader(new InputStreamReader(url.openStream()));
+            StringBuffer buffer = new StringBuffer();
+            int read;
+            char[] chars = new char[1024];
+            while ((read = reader.read(chars)) != -1) {
+                buffer.append(chars, 0, read);
+            }
+            System.out.println(buffer.toString());
+            return buffer.toString();
+        } finally {
+            if (reader != null)
+                reader.close();
+        }
+    }
+
+    static void json(int rubles) throws Exception {
+
+        String jsonString = readUrl("https://www.cbr-xml-daily.ru/daily_json.js");
+        double euroRate = JsonPath.read(jsonString, "$.Valute.EUR.Value");
+        double euro = rubles / euroRate;
+        System.out.println("" + euro);
     }
 
 }
